@@ -2,15 +2,26 @@ import os
 
 # 데이터셋 이름 리스트
 datasets = [
-    "venn",
+    "circle_size_number",
     "color_grid",
     "color_hexagon",
-    "size_cycle",
-    "size_grid",
+    "color_number_hexagon",
+    "color_overlap_squares",
+    "color_size_circle",
+    "grid_number_color",
+    "grid_number",
+    "polygon_sides_color",
+    "polygon_sides_number",
+    "rectangle_height_color",
+    "rectangle_height_number",
     "shape_morph",
     "shape_reflect",
-    "grid_number",
-    "triangle"
+    "shape_size_grid",
+    "shape_size_hexagon",
+    "size_cycle",
+    "size_grid",
+    "triangle",
+    "venn"
 ]
 
 # sequential reasoning
