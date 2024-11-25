@@ -97,7 +97,7 @@ def sequential_reasoning(base64_image, model_name, sample, prompter, attributes)
     perception = f"""
     You are an expert for visual perception in puzzle solving.
     Explain how the objects are arranged and what shape they form, 
-    and describe how attributes 1.{attributes[0]} 2.{attributes[1]} are changing for each objects for the given image.
+    and describe how attributes [1.colors 2.numbers 3.sizes 4.shapes] are changing for each objects.
     Do not provide logical inferences, describe only what you see.
 
     Let's think step by step.
@@ -213,7 +213,7 @@ def evaluate_multi_choice(
         data_path: str,
         image_dir: str = "data",
         prompt_name: str = "cot_multi_extract",
-        output_dir: str = "outputs_dynamic",
+        output_dir: str = "outputs_dynamic_2",
         prevent_direct_answer: bool = False,
         use_describe_image_prompt: bool = True,
         **kwargs,
@@ -252,8 +252,8 @@ def evaluate_multi_choice(
                 image = sample.image
             else:
                 image = convert_text_to_image(sample.image_string)
-            single_prompt = f"""{sample.prompt} Derive answer by focusing on the pattern of {attributes[0]} in the image."""
-            sample.prompt = single_prompt
+            # single_prompt = f"""{sample.prompt} Derive answer by focusing on the pattern of {attributes[0]} in the image."""
+            # sample.prompt = single_prompt
             sample.raw_output = model.run(sample.prompt, image)
             sample.pred = prompter.get_answer(sample.raw_output, sample.options)
 
