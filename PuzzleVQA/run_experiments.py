@@ -27,6 +27,8 @@ dynamic = (
     "--prompt_name cot_multi_extract "
 )
 
+
+
 # 순차적으로 명령어 실행
 for dataset in datasets:
     command = dynamic.format(dataset=dataset)
