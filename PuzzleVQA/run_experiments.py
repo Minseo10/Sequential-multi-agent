@@ -25,10 +25,19 @@ datasets = [
 ]
 
 # sequential reasoning
-sequential_command = (
-    "python main_debate.py evaluate_multi_choice_sequential data/{dataset}.json "
+sequential = (
+    "python main_sequential.py evaluate_multi_choice data/{dataset}.json "
     "--model_name gpt4o "
     "--prompt_name cot_multi_extract "
+)
+
+# multi-agent debate
+multi_agent_debate = (
+    "python main_debate.py evaluate_multi_choice data/{dataset}.json "
+    "--model_name gpt4o "
+    "--prompt_name cot_multi_extract "
+    "--num_agents 2 "
+    "--rounds 3 "
 )
 
 # single agent
@@ -38,16 +47,18 @@ dynamic = (
     "--prompt_name cot_multi_extract "
 )
 
-
+# self-consistency
+consistency = (
+    "python main_consistency.py evaluate_multi_choice data/{dataset}.json "
+    "--model_name gpt4o "
+    "--prompt_name cot_multi_extract "
+    "--num_samples 6 "
+    "--similarity_threshold 0.8 "
+)
 
 # 순차적으로 명령어 실행
 for dataset in datasets:
-    command = dynamic.format(dataset=dataset)
+    command = consistency.format(dataset=dataset)
     print(f"Running: {command}")
     os.system(command)
 
-# 순차적으로 명령어 실행
-# for dataset in datasets:
-#     command = sequential_command.format(dataset=dataset)
-#     print(f"Running: {command}")
-#     os.system(command)

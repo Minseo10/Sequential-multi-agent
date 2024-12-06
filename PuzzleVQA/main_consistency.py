@@ -11,6 +11,10 @@ from prompting import select_prompter
 
 import mad
 import base64
+from openai import OpenAI
+import json
+from self_consistency import advanced_self_consistency_approach
+import time
 
 
 class Scorer(BaseModel):
@@ -24,24 +28,25 @@ class ExactScorer(Scorer):
             return 1.0
         return 0.0
 
+
 # Function to encode the image
 def encode_image(image_path):
-  with open(image_path, "rb") as image_file:
-    return base64.b64encode(image_file.read()).decode('utf-8')
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
 
 
-# Multi agent debate framework (Society of Mind)
+# Self-consistency
 def evaluate_multi_choice(
-    data_path: str,
-    image_dir: str = "data",
-    prompt_name: str = "cot_multi_extract",
-    output_dir: str = "outputs_debate",
-    prevent_direct_answer: bool = False,
-    use_describe_image_prompt: bool = True,
-    **kwargs,
+        data_path: str,
+        image_dir: str = "data",
+        prompt_name: str = "cot_multi_extract",
+        output_dir: str = "outputs_consistency",
+        prevent_direct_answer: bool = False,
+        use_describe_image_prompt: bool = True,
+        **kwargs,
 ):
     print(locals())
-    data = Data.load_with_image_dir(data_path, image_dir)  # json의 각 객체
+    data = Data.load_with_image_dir(data_path, image_dir)
     model_name = kwargs.get("model_name")
     path_out = f"{output_dir}/{Path(data_path).stem}/{model_name}/{prompt_name}.jsonl"
     print(dict(path_out=path_out))
@@ -59,62 +64,40 @@ def evaluate_multi_choice(
     if not use_describe_image_prompt:
         prompter.base_prompter.use_describe_image_prompt = False
 
+    with open("key.json", "r") as f:
+        config = json.load(f)
+    api_key = config["OPENAI_API_KEY"]
+    client = OpenAI(api_key=api_key)
+
     for sample in progress:
         # bring base prompt
         sample.prompt = prompter.base_prompter.run(sample)
         # print("sample.prompt:\n", sample.prompt)
 
         # image = convert_text_to_image(sample.image_string)
-        image_path = "data/"+sample.image
+        image_path = "data/" + sample.image
         base64_image = encode_image(image_path)
 
-        num_agents = kwargs.get("num_agents")  # number of agents
-        agent_context_prompt = f'''
-        {sample.prompt}
-        Make sure to state your answer at the end of the response.
-        '''
-        agent_contexts = [[{"role": "user", "content": [
-                {"type": "text",
-                 "text": agent_context_prompt},
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url":  f"data:image/jpeg;base64,{base64_image}"
-                    },
-                },
-            ]}] for _ in range(num_agents)]
-        rounds = kwargs.get("rounds")  # number of rounds
-        question_prompt = f'''
-        We seek to find the result of {sample.prompt}?
-        '''
+        num_samples = kwargs.get("num_samples")  # number of sampled responses
+        similarity_threshold = kwargs.get("similarity_threshold")
 
-        for round in range(rounds):
-            for i, agent_context in enumerate(agent_contexts):
-                if round != 0:
-                    other_agents = agent_contexts[:i] + agent_contexts[i + 1:]
-                    message = mad.construct_message(other_agents, question_prompt, 2*round - 1)
-                    agent_context.append(message)
-
-                completion = mad.generate_answer(agent_context, model_name)
-
-                assistant_message = mad.construct_assistant_message(completion)
-                agent_context.append(assistant_message)
-
-        # answer extraction
-        answers = []
-        for agent_context in agent_contexts:
-            text_answer = string =  agent_context[-1]['content']
-            print("agent answers:\n", text_answer)
-            option_answer = prompter.get_answer(text_answer, sample.options)
-            if option_answer is None:
-                continue
-            answers.append(option_answer)
-
-
-        # sample.pred = mad.most_frequent([mad.parse_answer(agent_context["content"]) for agent_context in agent_contexts])
-        sample.pred = mad.most_frequent(answers)
-        print("answers:\n", answers)
-        print("sample.pred:\n", sample.pred)
+        start_time = time.time()
+        try:
+            approach_func = advanced_self_consistency_approach
+            result = approach_func("", sample.prompt, client, "gpt-4o", num_samples, similarity_threshold, base64_image)
+            answer = result[0]
+            end_time = time.time()
+            final_answer = ""
+        except Exception as e:
+            end_time = time.time()
+            answer = ""
+            print(f"Error in self consistency: {str(e)}")
+        # answer
+        final_answer = prompter.get_answer(answer, sample.options)
+        sample.pred = final_answer
+        sample.raw_output = answer
+        print("Raw output:", answer)
+        print("Final Answer:", final_answer)
 
         # scoring
         is_correct.append(scorer.run(sample))
@@ -123,6 +106,7 @@ def evaluate_multi_choice(
         print(sample.json(indent=2, exclude={"image_string"}))
         print(dict(is_correct=is_correct[-1]))
         data.save(path_out)
+
 
 def print_results(*paths: str):
     scorer = ExactScorer()
@@ -191,7 +175,6 @@ def print_results(*paths: str):
 python main.py print_results outputs/*/*/*.jsonl #Linux
 python main_debate.py print_results (Get-ChildItem outputs_sequential\*\*\*.jsonl).FullName #Window
 """
-
 
 if __name__ == "__main__":
     Fire()
