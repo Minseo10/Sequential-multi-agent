@@ -35,7 +35,7 @@ def evaluate_multi_choice(
     data_path: str,
     image_dir: str = "data",
     prompt_name: str = "cot_multi_extract",
-    output_dir: str = "outputs_debate",
+    output_dir: str = "outputs_debate2",
     prevent_direct_answer: bool = False,
     use_describe_image_prompt: bool = True,
     **kwargs,
@@ -67,6 +67,7 @@ def evaluate_multi_choice(
         # image = convert_text_to_image(sample.image_string)
         image_path = "data/"+sample.image
         base64_image = encode_image(image_path)
+        sample.image_string = ""
 
         num_agents = kwargs.get("num_agents")  # number of agents
         agent_context_prompt = f'''
@@ -104,7 +105,10 @@ def evaluate_multi_choice(
         answers = []
         for agent_context in agent_contexts:
             text_answer = string =  agent_context[-1]['content']
+            agent_answer = f"agent answer: {text_answer}"
+            sample.raw_output += agent_answer + "\n"
             print("agent answers:\n", text_answer)
+
             option_answer = prompter.get_answer(text_answer, sample.options)
             if option_answer is None:
                 continue
