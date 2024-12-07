@@ -204,7 +204,7 @@ class GPT4VModel(OpenAIModel):
 
 
 class GPT4oModel(OpenAIModel):
-    engine: str = "gpt-4o-2024-05-13"
+    engine: str = "gpt-4o"
 
     def load(self):
         if self.client is None:
